@@ -5,19 +5,22 @@ import type React from "react"
 import { useRef, useState } from "react"
 import { Upload, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Spinner from "@/components/spinner"
 
 interface FileUploadSectionProps {
   onFileUpload: (file: File) => void
   onAddNames: (names: string[]) => void
+  isUploading?: boolean
 }
 
-export default function FileUploadSection({ onFileUpload, onAddNames }: FileUploadSectionProps) {
+export default function FileUploadSection({ onFileUpload, onAddNames, isUploading = false }: FileUploadSectionProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragActive, setIsDragActive] = useState(false)
   const [fileName, setFileName] = useState<string>("")
   const [showManualInput, setShowManualInput] = useState(false)
   const [manualName, setManualName] = useState("")
   const [manualNames, setManualNames] = useState<string[]>([])
+  const [isAddingManual, setIsAddingManual] = useState(false)
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -56,13 +59,15 @@ export default function FileUploadSection({ onFileUpload, onAddNames }: FileUplo
     }
   }
 
-  const handleAddName = () => {
+  const handleAddName = async () => {
     const trimmedName = manualName.trim()
     if (trimmedName && !manualNames.includes(trimmedName)) {
+      setIsAddingManual(true)
       const updatedNames = [...manualNames, trimmedName]
       setManualNames(updatedNames)
       setManualName("")
-      onAddNames(updatedNames)
+      await onAddNames(updatedNames)
+      setIsAddingManual(false)
     }
   }
 
@@ -73,7 +78,7 @@ export default function FileUploadSection({ onFileUpload, onAddNames }: FileUplo
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !isAddingManual) {
       handleAddName()
     }
   }
@@ -85,33 +90,39 @@ export default function FileUploadSection({ onFileUpload, onAddNames }: FileUplo
         <p className="text-sm text-slate-600">Upload file Excel atau tambahkan nama secara manual</p>
       </div>
 
-      <div
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-all mb-6 ${
-          isDragActive ? "border-blue-500 bg-blue-50" : "border-slate-300 bg-slate-50 hover:border-slate-400"
-        }`}
-      >
-        <div className="mb-4">
-          <Upload className={`w-12 h-12 mx-auto ${isDragActive ? "text-blue-600" : "text-slate-400"}`} />
+      {isUploading ? (
+        <div className="border-2 border-dashed rounded-lg p-8 text-center bg-blue-50 border-blue-300">
+          <Spinner message="Sedang membaca file Excel..." />
         </div>
-
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors mb-3"
+      ) : (
+        <div
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-all mb-6 ${
+            isDragActive ? "border-blue-500 bg-blue-50" : "border-slate-300 bg-slate-50 hover:border-slate-400"
+          }`}
         >
-          Pilih File
-        </button>
+          <div className="mb-4">
+            <Upload className={`w-12 h-12 mx-auto ${isDragActive ? "text-blue-600" : "text-slate-400"}`} />
+          </div>
 
-        <p className="text-sm text-slate-600 mb-1">atau drag & drop file Excel di sini</p>
-        <p className="text-xs text-slate-500">Format: .xlsx</p>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors mb-3"
+          >
+            Pilih File
+          </button>
 
-        {fileName && <p className="text-sm text-emerald-600 font-medium mt-4">✓ {fileName}</p>}
+          <p className="text-sm text-slate-600 mb-1">atau drag & drop file Excel di sini</p>
+          <p className="text-xs text-slate-500">Format: .xlsx</p>
 
-        <input ref={fileInputRef} type="file" accept=".xlsx" onChange={handleFileSelect} className="hidden" />
-      </div>
+          {fileName && <p className="text-sm text-emerald-600 font-medium mt-4">✓ {fileName}</p>}
+
+          <input ref={fileInputRef} type="file" accept=".xlsx" onChange={handleFileSelect} className="hidden" />
+        </div>
+      )}
 
       <div className="flex items-center gap-3 mb-6">
         <div className="flex-1 h-px bg-slate-200"></div>
@@ -128,14 +139,24 @@ export default function FileUploadSection({ onFileUpload, onAddNames }: FileUplo
             onChange={(e) => setManualName(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Masukkan nama..."
-            className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={isAddingManual}
+            className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed"
           />
           <Button
             onClick={handleAddName}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
+            disabled={isAddingManual}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Tambah</span>
+            {isAddingManual ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Tambah</span>
+              </>
+            )}
           </Button>
         </div>
 

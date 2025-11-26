@@ -5,6 +5,7 @@ import FileUploadSection from "@/components/file-upload-section"
 import TemplateEditorSection from "@/components/template-editor-section"
 import PreviewSection from "@/components/preview-section"
 import NamesListSection from "@/components/names-list-section"
+import Spinner from "@/components/spinner"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, CheckCircle2, Download } from "lucide-react"
 
@@ -26,12 +27,40 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
   const [selectedName, setSelectedName] = useState<string>("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isUploading, setIsUploading] = useState(false)
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle")
   const [errorMessage, setErrorMessage] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     loadNames()
   }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (template) {
+        saveTemplate()
+      }
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [template])
+
+  const saveTemplate = async () => {
+    try {
+      setIsSaving(true)
+      const response = await fetch("/api/template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template }),
+      })
+      if (!response.ok) throw new Error("Failed to save template")
+    } catch (err) {
+      console.error("[v0] Error saving template:", err)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const loadNames = async () => {
     try {
@@ -43,8 +72,16 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
       if (data.length > 0) {
         setSelectedName(data[0].name)
       }
+
+      const templateResponse = await fetch("/api/template")
+      if (templateResponse.ok) {
+        const templateData = await templateResponse.json()
+        if (templateData.template) {
+          setTemplate(templateData.template)
+        }
+      }
     } catch (err) {
-      console.error("[v0] Error loading names:", err)
+      console.error("[v0] Error loading data:", err)
     } finally {
       setIsLoading(false)
     }
@@ -55,6 +92,7 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
       setStatus("idle")
       setErrorMessage("")
       setFile(uploadedFile)
+      setIsUploading(true)
 
       const formData = new FormData()
       formData.append("file", uploadedFile)
@@ -74,6 +112,8 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
     } catch (err) {
       setStatus("error")
       setErrorMessage(err instanceof Error ? err.message : "Terjadi kesalahan")
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -218,8 +258,8 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
 
         {/* Top Section - Upload & Template */}
         <div className="grid lg:grid-cols-2 gap-8 mb-8">
-          <FileUploadSection onFileUpload={handleFileUpload} onAddNames={handleAddNames} />
-          <TemplateEditorSection template={template} setTemplate={setTemplate} />
+          <FileUploadSection onFileUpload={handleFileUpload} onAddNames={handleAddNames} isUploading={isUploading} />
+          <TemplateEditorSection template={template} setTemplate={setTemplate} isSaving={isSaving} />
         </div>
 
         {/* Preview Section - Full Width */}
@@ -241,10 +281,19 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
             <Button
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-base font-semibold rounded-lg"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-base font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download className="w-5 h-5 mr-2" />
-              {isGenerating ? "Sedang Generate..." : "Download Excel"}
+              {isGenerating ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Sedang Generate...
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5 mr-2" />
+                  Download Excel
+                </>
+              )}
             </Button>
           </div>
         )}
@@ -259,6 +308,13 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
             onDelete={handleDeleteName}
             onUpdate={handleUpdateName}
           />
+        )}
+
+        {/* Loading state for initial data */}
+        {isLoading && (
+          <div className="flex justify-center py-12">
+            <Spinner message="Memuat data..." />
+          </div>
         )}
       </div>
     </div>
