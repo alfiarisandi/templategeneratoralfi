@@ -1,12 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Copy, MessageCircle, CheckCircle2, Trash2, Edit2, X, Check } from "lucide-react"
+import { Copy, MessageCircle, CheckCircle2, Trash2, Edit2, X, Check, Send } from "lucide-react"
 import Pagination from "./pagination"
 
 interface NameItem {
   id: string
   name: string
+  phone_number?: string
+  whatsapp_status?: "pending" | "sent" | "failed"
 }
 
 interface NamesListSectionProps {
@@ -16,6 +18,7 @@ interface NamesListSectionProps {
   renderTemplate: (name: string) => string
   onDelete: (id: string) => void
   onUpdate: (id: string, newName: string) => void
+  onSendWhatsApp: (id: string, name: string, phone: string) => Promise<void>
 }
 
 const ITEMS_PER_PAGE = 12
@@ -27,11 +30,14 @@ export default function NamesListSection({
   renderTemplate,
   onDelete,
   onUpdate,
+  onSendWhatsApp,
 }: NamesListSectionProps) {
   const [copiedName, setCopiedName] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
+  const [sendingId, setSendingId] = useState<string | null>(null)
+  const [sendingError, setSendingError] = useState<string | null>(null)
 
   const totalPages = Math.ceil(names.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
@@ -44,11 +50,29 @@ export default function NamesListSection({
     setTimeout(() => setCopiedName(null), 2000)
   }
 
-  const handleShareWhatsApp = (name: string) => {
+  const handleShareWhatsApp = (name: string, phone: string) => {
     const renderedText = renderTemplate(name)
     const encodedText = encodeURIComponent(renderedText)
-    const whatsappUrl = `https://wa.me/?text=${encodedText}`
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodedText}`
     window.open(whatsappUrl, "_blank")
+  }
+
+  const handleSendWhatsApp = async (id: string, name: string, phone: string) => {
+    if (!phone) {
+      setSendingError("Nomor HP tidak ditemukan")
+      return
+    }
+
+    try {
+      setSendingId(id)
+      setSendingError(null)
+      const renderedText = renderTemplate(name)
+      await onSendWhatsApp(id, name, phone)
+    } catch (err) {
+      setSendingError(err instanceof Error ? err.message : "Gagal mengirim pesan")
+    } finally {
+      setSendingId(null)
+    }
   }
 
   const startEdit = (id: string, currentName: string) => {
@@ -68,90 +92,130 @@ export default function NamesListSection({
     setEditValue("")
   }
 
+  const getStatusDisplay = (status?: string) => {
+    switch (status) {
+      case "sent":
+        return { color: "bg-emerald-100 text-emerald-700 border-emerald-300", label: "Terkirim" }
+      case "failed":
+        return { color: "bg-red-100 text-red-700 border-red-300", label: "Gagal" }
+      default:
+        return { color: "bg-yellow-100 text-yellow-700 border-yellow-300", label: "Menunggu" }
+    }
+  }
+
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-6">
       <h2 className="text-lg font-bold text-slate-900 mb-4">Daftar Nama ({names.length})</h2>
 
+      {sendingError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">{sendingError}</div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {paginatedNames.map((item) => (
-          <div
-            key={item.id}
-            className="p-3 rounded-lg border border-slate-200 bg-slate-50 hover:border-slate-300 transition-all"
-          >
-            <div className="mb-3">
-              {editingId === item.id ? (
-                <input
-                  type="text"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  className="w-full px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autoFocus
-                />
-              ) : (
-                <p className="font-medium text-slate-900 text-sm truncate">{item.name}</p>
-              )}
+        {paginatedNames.map((item) => {
+          const statusDisplay = getStatusDisplay(item.whatsapp_status)
+          return (
+            <div
+              key={item.id}
+              className="p-3 rounded-lg border border-slate-200 bg-slate-50 hover:border-slate-300 transition-all"
+            >
+              <div className="mb-3">
+                {editingId === item.id ? (
+                  <input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="w-full px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                ) : (
+                  <div>
+                    <p className="font-medium text-slate-900 text-sm truncate">{item.name}</p>
+                    {item.phone_number && <p className="text-xs text-slate-600 truncate">{item.phone_number}</p>}
+                    <div
+                      className={`inline-block text-xs font-medium px-2 py-1 rounded-full border mt-2 ${statusDisplay.color}`}
+                    >
+                      {statusDisplay.label}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                {editingId === item.id ? (
+                  <>
+                    <button
+                      onClick={() => saveEdit(item.id)}
+                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-colors"
+                      title="Simpan"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={cancelEdit}
+                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors"
+                      title="Batal"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleCopyTemplate(item.name)}
+                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                      title="Salin template"
+                    >
+                      {copiedName === item.name ? (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => handleSendWhatsApp(item.id, item.name, item.phone_number || "")}
+                      disabled={sendingId === item.id || !item.phone_number}
+                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-green-100 hover:bg-green-200 text-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Kirim ke WhatsApp via API"
+                    >
+                      {sendingId === item.id ? (
+                        <div className="w-3 h-3 border-2 border-green-700 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => handleShareWhatsApp(item.name, item.phone_number || "")}
+                      disabled={!item.phone_number}
+                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Share ke WhatsApp"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() => startEdit(item.id, item.name)}
+                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors"
+                      title="Edit nama"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() => onDelete(item.id)}
+                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-red-100 hover:bg-red-200 text-red-700 transition-colors"
+                      title="Hapus nama"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-
-            <div className="flex gap-2 flex-wrap">
-              {editingId === item.id ? (
-                <>
-                  <button
-                    onClick={() => saveEdit(item.id)}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-colors"
-                    title="Simpan"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={cancelEdit}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors"
-                    title="Batal"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => handleCopyTemplate(item.name)}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                    title="Salin template"
-                  >
-                    {copiedName === item.name ? (
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => handleShareWhatsApp(item.name)}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-green-100 hover:bg-green-200 text-green-700 transition-colors"
-                    title="Share ke WhatsApp"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    onClick={() => startEdit(item.id, item.name)}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors"
-                    title="Edit nama"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    onClick={() => onDelete(item.id)}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-red-100 hover:bg-red-200 text-red-700 transition-colors"
-                    title="Hapus nama"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {names.length === 0 && <p className="text-sm text-slate-500 text-center py-4">Tidak ada nama</p>}

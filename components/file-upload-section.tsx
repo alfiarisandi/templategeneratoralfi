@@ -7,9 +7,14 @@ import { Upload, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Spinner from "@/components/spinner"
 
+interface ManualEntry {
+  name: string
+  phone: string
+}
+
 interface FileUploadSectionProps {
   onFileUpload: (file: File) => void
-  onAddNames: (names: string[]) => void
+  onAddNames: (entries: ManualEntry[]) => void
   isUploading?: boolean
 }
 
@@ -17,9 +22,9 @@ export default function FileUploadSection({ onFileUpload, onAddNames, isUploadin
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragActive, setIsDragActive] = useState(false)
   const [fileName, setFileName] = useState<string>("")
-  const [showManualInput, setShowManualInput] = useState(false)
   const [manualName, setManualName] = useState("")
-  const [manualNames, setManualNames] = useState<string[]>([])
+  const [manualPhone, setManualPhone] = useState("")
+  const [manualEntries, setManualEntries] = useState<ManualEntry[]>([])
   const [isAddingManual, setIsAddingManual] = useState(false)
 
   const handleDrag = (e: React.DragEvent) => {
@@ -59,27 +64,30 @@ export default function FileUploadSection({ onFileUpload, onAddNames, isUploadin
     }
   }
 
-  const handleAddName = async () => {
+  const handleAddEntry = async () => {
     const trimmedName = manualName.trim()
-    if (trimmedName && !manualNames.includes(trimmedName)) {
+    const trimmedPhone = manualPhone.trim()
+
+    if (trimmedName && trimmedPhone) {
       setIsAddingManual(true)
-      const updatedNames = [...manualNames, trimmedName]
-      setManualNames(updatedNames)
+      const updatedEntries = [...manualEntries, { name: trimmedName, phone: trimmedPhone }]
+      setManualEntries(updatedEntries)
       setManualName("")
-      await onAddNames(updatedNames)
+      setManualPhone("")
+      await onAddNames(updatedEntries)
       setIsAddingManual(false)
     }
   }
 
-  const handleRemoveName = (index: number) => {
-    const updatedNames = manualNames.filter((_, i) => i !== index)
-    setManualNames(updatedNames)
-    onAddNames(updatedNames)
+  const handleRemoveEntry = (index: number) => {
+    const updatedEntries = manualEntries.filter((_, i) => i !== index)
+    setManualEntries(updatedEntries)
+    onAddNames(updatedEntries)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !isAddingManual) {
-      handleAddName()
+      handleAddEntry()
     }
   }
 
@@ -87,7 +95,7 @@ export default function FileUploadSection({ onFileUpload, onAddNames, isUploadin
     <div className="bg-white rounded-lg border border-slate-200 p-8">
       <div className="mb-4">
         <h2 className="text-xl font-bold text-slate-900 mb-2">Langkah 1: Upload File atau Tambah Nama</h2>
-        <p className="text-sm text-slate-600">Upload file Excel atau tambahkan nama secara manual</p>
+        <p className="text-sm text-slate-600">Upload file Excel atau tambahkan nama dan nomor HP secara manual</p>
       </div>
 
       {isUploading ? (
@@ -116,7 +124,7 @@ export default function FileUploadSection({ onFileUpload, onAddNames, isUploadin
           </button>
 
           <p className="text-sm text-slate-600 mb-1">atau drag & drop file Excel di sini</p>
-          <p className="text-xs text-slate-500">Format: .xlsx</p>
+          <p className="text-xs text-slate-500">Format: .xlsx dengan kolom Nama dan Nomor HP</p>
 
           {fileName && <p className="text-sm text-emerald-600 font-medium mt-4">✓ {fileName}</p>}
 
@@ -131,47 +139,60 @@ export default function FileUploadSection({ onFileUpload, onAddNames, isUploadin
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-slate-900">Tambah Nama Secara Manual</h3>
-        <div className="flex gap-2">
+        <h3 className="text-sm font-semibold text-slate-900">Tambah Nama & Nomor HP Secara Manual</h3>
+        <div className="space-y-2">
           <input
             type="text"
             value={manualName}
             onChange={(e) => setManualName(e.target.value)}
-            onKeyPress={handleKeyPress}
             placeholder="Masukkan nama..."
             disabled={isAddingManual}
-            className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed"
           />
-          <Button
-            onClick={handleAddName}
-            disabled={isAddingManual}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isAddingManual ? (
-              <>
-                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Tambah</span>
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={manualPhone}
+              onChange={(e) => setManualPhone(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Nomor HP (cth: 62812345678)..."
+              disabled={isAddingManual}
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed"
+            />
+            <Button
+              onClick={handleAddEntry}
+              disabled={isAddingManual}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isAddingManual ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Tambah</span>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
-        {manualNames.length > 0 && (
+        {manualEntries.length > 0 && (
           <div className="mt-4">
-            <p className="text-xs text-slate-600 mb-2">Nama yang ditambahkan ({manualNames.length}):</p>
-            <div className="flex flex-wrap gap-2">
-              {manualNames.map((name, index) => (
+            <p className="text-xs text-slate-600 mb-2">Data yang ditambahkan ({manualEntries.length}):</p>
+            <div className="space-y-2">
+              {manualEntries.map((entry, index) => (
                 <div
                   key={index}
-                  className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-sm text-blue-900"
+                  className="flex items-center justify-between px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm"
                 >
-                  <span>{name}</span>
+                  <div>
+                    <p className="font-medium text-blue-900">{entry.name}</p>
+                    <p className="text-xs text-blue-700">{entry.phone}</p>
+                  </div>
                   <button
-                    onClick={() => handleRemoveName(index)}
+                    onClick={() => handleRemoveEntry(index)}
                     className="text-blue-600 hover:text-blue-700 transition-colors"
                   >
                     <X className="w-3.5 h-3.5" />

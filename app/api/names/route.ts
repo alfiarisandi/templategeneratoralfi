@@ -18,7 +18,7 @@ export async function GET() {
 // POST new name
 export async function POST(request: Request) {
   try {
-    const { name } = await request.json()
+    const { name, phone_number } = await request.json()
     if (!name || name.trim().length === 0) {
       return NextResponse.json({ error: "Name cannot be empty" }, { status: 400 })
     }
@@ -26,7 +26,12 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const { data, error } = await supabase
       .from("names")
-      .insert([{ name: name.trim() }])
+      .insert([
+        {
+          name: name.trim(),
+          phone_number: phone_number ? String(phone_number).trim() : null,
+        },
+      ])
       .select()
       .single()
 

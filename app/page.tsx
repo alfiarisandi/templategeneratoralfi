@@ -6,12 +6,14 @@ import TemplateEditorSection from "@/components/template-editor-section"
 import PreviewSection from "@/components/preview-section"
 import NamesListSection from "@/components/names-list-section"
 import Spinner from "@/components/spinner"
+import WhatsAppDeviceSetup from "@/components/whatsapp-device-setup"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, CheckCircle2, Download } from "lucide-react"
 
 interface NameItem {
   id: string
   name: string
+  phone_number: string
 }
 
 export default function Home() {
@@ -107,7 +109,7 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
       }
 
       const data = await response.json()
-      await addNamesToDatabase(data.names || [])
+      await addEntriesToDatabase(data.entries || [])
       setStatus("success")
     } catch (err) {
       setStatus("error")
@@ -117,26 +119,26 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
     }
   }
 
-  const addNamesToDatabase = async (newNames: string[]) => {
+  const addEntriesToDatabase = async (entries: Array<{ name: string; phone: string }>) => {
     try {
-      for (const name of newNames) {
+      for (const entry of entries) {
         const response = await fetch("/api/names", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name }),
+          body: JSON.stringify({ name: entry.name, phone_number: entry.phone }),
         })
-        if (!response.ok) throw new Error("Failed to add name")
+        if (!response.ok) throw new Error("Failed to add entry")
       }
       await loadNames()
     } catch (err) {
-      console.error("[v0] Error adding names to database:", err)
+      console.error("[v0] Error adding entries to database:", err)
       throw err
     }
   }
 
-  const handleAddNames = async (newNames: string[]) => {
+  const handleAddNames = async (entries: Array<{ name: string; phone: string }>) => {
     try {
-      await addNamesToDatabase(newNames)
+      await addEntriesToDatabase(entries)
       setStatus("idle")
     } catch (err) {
       setStatus("error")
@@ -228,17 +230,36 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
     return template.replace(/\{\{nama\}\}/g, name)
   }
 
+  const handleSendWhatsApp = async (id: string, name: string, phone: string) => {
+    const renderedText = renderTemplate(name)
+    const response = await fetch("/api/send-whatsapp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nameId: id, phone, message: renderedText }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || "Gagal mengirim pesan WhatsApp")
+    }
+
+    await loadNames()
+  }
+
   const namesList = names.map((n) => n.name)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 md:px-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-3">Generator Template Excel</h1>
-          <p className="text-lg text-slate-600">
-            Upload file Excel atau tambah nama, buat template, dan generate dokumen dengan mudah
-          </p>
+        {/* Header with Device Setup Button */}
+        <div className="flex justify-between items-start mb-12">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-3">Generator Template Excel</h1>
+            <p className="text-lg text-slate-600">
+              Upload file Excel atau tambah nama, buat template, dan generate dokumen dengan mudah
+            </p>
+          </div>
+          <WhatsAppDeviceSetup />
         </div>
 
         {/* Status Messages */}
@@ -266,11 +287,12 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
         {namesList.length > 0 && (
           <div className="mb-8">
             <PreviewSection
-              names={namesList}
+              names={names}
               template={template}
               selectedName={selectedName}
               setSelectedName={setSelectedName}
               renderTemplate={renderTemplate}
+              onSendWhatsApp={handleSendWhatsApp}
             />
           </div>
         )}
@@ -307,6 +329,7 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
             renderTemplate={renderTemplate}
             onDelete={handleDeleteName}
             onUpdate={handleUpdateName}
+            onSendWhatsApp={handleSendWhatsApp}
           />
         )}
 
