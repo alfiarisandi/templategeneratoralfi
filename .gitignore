@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+
+# Output
+.next/
+out/
+
+# Build
+dist/
+
+# Production
+*.local
+
+# Env files
+.env
+.env*.local
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+.idea/
+*.swp
+
+# TypeScript
+*.tsbuildinfo
+
+# Next.js Cache
+.next/
+.next/cache/
+
+# Turbo
+.turbo/
+
+# Coverage
+coverage/
+
+# Storybook
+storybook-static/

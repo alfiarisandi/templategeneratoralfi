@@ -1,164 +1,180 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import FileUploadSection from "@/components/file-upload-section"
-import TemplateEditorSection from "@/components/template-editor-section"
-import PreviewSection from "@/components/preview-section"
-import NamesListSection from "@/components/names-list-section"
-import Spinner from "@/components/spinner"
-import WhatsAppDeviceSetup from "@/components/whatsapp-device-setup"
-import { Button } from "@/components/ui/button"
-import { AlertCircle, CheckCircle2, Download } from "lucide-react"
+import FileUploadSection from "@/components/file-upload-section";
+import NamesListSection from "@/components/names-list-section";
+import PreviewSection from "@/components/preview-section";
+import Spinner from "@/components/spinner";
+import TemplateEditorSection from "@/components/template-editor-section";
+import { Button } from "@/components/ui/button";
+import WhatsAppDeviceSetup from "@/components/whatsapp-device-setup";
+import { AlertCircle, CheckCircle2, Download } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface NameItem {
-  id: string
-  name: string
-  phone_number: string
+  id: string;
+  name: string;
+  phone_number: string;
 }
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null)
-  const [names, setNames] = useState<NameItem[]>([])
-  const [template, setTemplate] = useState(
-    `Assalamu'alaikum Wr. Wb.
-
-Tanpa mengurangi rasa hormat, kami mengundang Bapak/Ibu/Saudara/i {{nama}} untuk menghadiri acara pernikahan kami.
-
-Terima kasih banyak atas perhatian dan doa restunya.`,
-  )
-  const [selectedName, setSelectedName] = useState<string>("")
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isUploading, setIsUploading] = useState(false)
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle")
-  const [errorMessage, setErrorMessage] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
+  const [file, setFile] = useState<File | null>(null);
+  const [names, setNames] = useState<NameItem[]>([]);
+  const [template, setTemplate] = useState("");
+  const [selectedName, setSelectedName] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    loadNames()
-  }, [])
+    loadNames();
+  }, []);
+
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     if (template) {
+  //       saveTemplate();
+  //     }
+  //   }, 1000);
+
+  //   return () => clearTimeout(timer);
+  // }, [template]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (template) {
-        saveTemplate()
-      }
-    }, 1000)
+    loadTemplate();
+  }, []);
 
-    return () => clearTimeout(timer)
-  }, [template])
+  const loadTemplate = async () => {
+    try {
+      setIsSaving(true);
+      const response = await fetch("/api/template");
+      if (!response.ok) throw new Error("Failed to save template");
+      const data = await response.json();
+      setTemplate(data.template || "");
+    } catch (err) {
+      console.error("[v0] Error saving template:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const saveTemplate = async () => {
     try {
-      setIsSaving(true)
+      setIsSaving(true);
       const response = await fetch("/api/template", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ template }),
-      })
-      if (!response.ok) throw new Error("Failed to save template")
+      });
+      if (!response.ok) throw new Error("Failed to save template");
     } catch (err) {
-      console.error("[v0] Error saving template:", err)
+      console.error("[v0] Error saving template:", err);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const loadNames = async () => {
     try {
-      setIsLoading(true)
-      const response = await fetch("/api/names")
-      if (!response.ok) throw new Error("Failed to load names")
-      const data = await response.json()
-      setNames(data)
+      setIsLoading(true);
+      const response = await fetch("/api/names");
+      if (!response.ok) throw new Error("Failed to load names");
+      const data = await response.json();
+      setNames(data);
       if (data.length > 0) {
-        setSelectedName(data[0].name)
+        setSelectedName(data[0].name);
       }
 
-      const templateResponse = await fetch("/api/template")
+      const templateResponse = await fetch("/api/template");
       if (templateResponse.ok) {
-        const templateData = await templateResponse.json()
+        const templateData = await templateResponse.json();
         if (templateData.template) {
-          setTemplate(templateData.template)
+          setTemplate(templateData.template);
         }
       }
     } catch (err) {
-      console.error("[v0] Error loading data:", err)
+      console.error("[v0] Error loading data:", err);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleFileUpload = async (uploadedFile: File) => {
     try {
-      setStatus("idle")
-      setErrorMessage("")
-      setFile(uploadedFile)
-      setIsUploading(true)
+      setStatus("idle");
+      setErrorMessage("");
+      setFile(uploadedFile);
+      setIsUploading(true);
 
-      const formData = new FormData()
-      formData.append("file", uploadedFile)
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
 
       const response = await fetch("/api/read-excel", {
         method: "POST",
         body: formData,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Gagal membaca file Excel")
+        throw new Error("Gagal membaca file Excel");
       }
 
-      const data = await response.json()
-      await addEntriesToDatabase(data.entries || [])
-      setStatus("success")
+      const data = await response.json();
+      await addEntriesToDatabase(data.entries || []);
+      setStatus("success");
     } catch (err) {
-      setStatus("error")
-      setErrorMessage(err instanceof Error ? err.message : "Terjadi kesalahan")
+      setStatus("error");
+      setErrorMessage(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
-      setIsUploading(false)
+      setIsUploading(false);
     }
-  }
+  };
 
-  const addEntriesToDatabase = async (entries: Array<{ name: string; phone: string }>) => {
+  const addEntriesToDatabase = async (
+    entries: Array<{ name: string; phone: string }>
+  ) => {
     try {
       for (const entry of entries) {
         const response = await fetch("/api/names", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: entry.name, phone_number: entry.phone }),
-        })
-        if (!response.ok) throw new Error("Failed to add entry")
+        });
+        if (!response.ok) throw new Error("Failed to add entry");
       }
-      await loadNames()
+      await loadNames();
     } catch (err) {
-      console.error("[v0] Error adding entries to database:", err)
-      throw err
+      console.error("[v0] Error adding entries to database:", err);
+      throw err;
     }
-  }
+  };
 
-  const handleAddNames = async (entries: Array<{ name: string; phone: string }>) => {
+  const handleAddNames = async (
+    entries: Array<{ name: string; phone: string }>
+  ) => {
     try {
-      await addEntriesToDatabase(entries)
-      setStatus("idle")
+      await addEntriesToDatabase(entries);
+      setStatus("idle");
     } catch (err) {
-      setStatus("error")
-      setErrorMessage(err instanceof Error ? err.message : "Terjadi kesalahan")
+      setStatus("error");
+      setErrorMessage(err instanceof Error ? err.message : "Terjadi kesalahan");
     }
-  }
+  };
 
   const handleDeleteName = async (id: string) => {
     try {
       const response = await fetch(`/api/names/${id}`, {
         method: "DELETE",
-      })
-      if (!response.ok) throw new Error("Failed to delete name")
-      await loadNames()
+      });
+      if (!response.ok) throw new Error("Failed to delete name");
+      await loadNames();
     } catch (err) {
-      console.error("[v0] Error deleting name:", err)
-      setStatus("error")
-      setErrorMessage("Gagal menghapus nama")
+      console.error("[v0] Error deleting name:", err);
+      setStatus("error");
+      setErrorMessage("Gagal menghapus nama");
     }
-  }
+  };
 
   const handleUpdateName = async (id: string, newName: string) => {
     try {
@@ -166,87 +182,99 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName }),
-      })
-      if (!response.ok) throw new Error("Failed to update name")
-      await loadNames()
+      });
+      if (!response.ok) throw new Error("Failed to update name");
+      await loadNames();
     } catch (err) {
-      console.error("[v0] Error updating name:", err)
-      setStatus("error")
-      setErrorMessage("Gagal mengubah nama")
+      console.error("[v0] Error updating name:", err);
+      setStatus("error");
+      setErrorMessage("Gagal mengubah nama");
     }
-  }
+  };
 
   const handleGenerate = async () => {
     if (names.length === 0) {
-      setStatus("error")
-      setErrorMessage("Silakan tambah nama terlebih dahulu")
-      return
+      setStatus("error");
+      setErrorMessage("Silakan tambah nama terlebih dahulu");
+      return;
     }
 
     if (!file) {
-      setStatus("error")
-      setErrorMessage("Silakan upload file Excel terlebih dahulu untuk generate")
-      return
+      setStatus("error");
+      setErrorMessage(
+        "Silakan upload file Excel terlebih dahulu untuk generate"
+      );
+      return;
     }
 
     try {
-      setIsGenerating(true)
-      setStatus("idle")
-      setErrorMessage("")
+      setIsGenerating(true);
+      setStatus("idle");
+      setErrorMessage("");
 
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("template", template)
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("template", template);
 
       const response = await fetch("/api/generate-excel", {
         method: "POST",
         body: formData,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error("Gagal generate Excel")
+        throw new Error("Gagal generate Excel");
       }
 
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = "hasil_template.xlsx"
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "hasil_template.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
-      setStatus("success")
+      setStatus("success");
     } catch (err) {
-      setStatus("error")
-      setErrorMessage(err instanceof Error ? err.message : "Terjadi kesalahan")
+      setStatus("error");
+      setErrorMessage(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }
+  };
 
   const renderTemplate = (name: string): string => {
-    return template.replace(/\{\{nama\}\}/g, name)
-  }
+    return template.replace(/\{\{nama\}\}/g, name);
+  };
 
-  const handleSendWhatsApp = async (id: string, name: string, phone: string) => {
-    const renderedText = renderTemplate(name)
+  const handleSendWhatsApp = async (
+    id: string,
+    name: string,
+    phone: string,
+    deviceId: string
+  ) => {
+    const renderedText = renderTemplate(name);
     const response = await fetch("/api/send-whatsapp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nameId: id, phone, message: renderedText }),
-    })
+      body: JSON.stringify({
+        nameId: id,
+        phone,
+        message: renderedText,
+        deviceId,
+      }),
+    });
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || "Gagal mengirim pesan WhatsApp")
+      const error = await response.json();
+      throw new Error(error.error || "Gagal mengirim pesan WhatsApp");
     }
 
-    await loadNames()
-  }
+    await loadNames();
+  };
 
-  const namesList = names.map((n) => n.name)
+  const namesList = names.map((n) => n.name);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 md:px-6">
@@ -254,9 +282,12 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
         {/* Header with Device Setup Button */}
         <div className="flex justify-between items-start mb-12">
           <div>
-            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-3">Generator Template Excel</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-3">
+              Generator Template Excel
+            </h1>
             <p className="text-lg text-slate-600">
-              Upload file Excel atau tambah nama, buat template, dan generate dokumen dengan mudah
+              Upload file Excel atau tambah nama, buat template, dan generate
+              dokumen dengan mudah
             </p>
           </div>
           <WhatsAppDeviceSetup />
@@ -266,7 +297,9 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
         {status === "success" && (
           <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-3">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-            <p className="text-emerald-800 text-sm font-medium">Proses berhasil! File siap diunduh.</p>
+            <p className="text-emerald-800 text-sm font-medium">
+              Proses berhasil! File siap diunduh.
+            </p>
           </div>
         )}
 
@@ -279,8 +312,17 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
 
         {/* Top Section - Upload & Template */}
         <div className="grid lg:grid-cols-2 gap-8 mb-8">
-          <FileUploadSection onFileUpload={handleFileUpload} onAddNames={handleAddNames} isUploading={isUploading} />
-          <TemplateEditorSection template={template} setTemplate={setTemplate} isSaving={isSaving} />
+          <FileUploadSection
+            onFileUpload={handleFileUpload}
+            onAddNames={handleAddNames}
+            isUploading={isUploading}
+          />
+          <TemplateEditorSection
+            template={template}
+            setTemplate={setTemplate}
+            isSaving={isSaving}
+            saveTemplate={saveTemplate}
+          />
         </div>
 
         {/* Preview Section - Full Width */}
@@ -341,5 +383,5 @@ Terima kasih banyak atas perhatian dan doa restunya.`,
         )}
       </div>
     </div>
-  )
+  );
 }

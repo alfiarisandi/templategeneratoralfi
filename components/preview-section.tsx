@@ -1,15 +1,31 @@
-"use client"
-import { Copy, MessageCircle, CheckCircle2, Send, AlertCircle } from "lucide-react"
-import { useState } from "react"
-import WhatsAppDeviceSelector from "./whatsapp-device-selector"
+"use client";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Copy,
+  MessageCircle,
+  Send,
+} from "lucide-react";
+import { useState } from "react";
+import WhatsAppDeviceSelector from "./whatsapp-device-selector";
 
 interface PreviewSectionProps {
-  names: Array<{ id: string; name: string; phone_number: string; whatsapp_status?: string }>
-  template: string
-  selectedName: string
-  setSelectedName: (name: string) => void
-  renderTemplate: (name: string) => string
-  onSendWhatsApp?: (id: string, name: string, phone: string, deviceId: string) => Promise<void>
+  names: Array<{
+    id: string;
+    name: string;
+    phone_number: string;
+    whatsapp_status?: string;
+  }>;
+  template: string;
+  selectedName: string;
+  setSelectedName: (name: string) => void;
+  renderTemplate: (name: string) => string;
+  onSendWhatsApp: (
+    id: string,
+    name: string,
+    phone_number: string,
+    deviceId: string
+  ) => Promise<void>;
 }
 
 export default function PreviewSection({
@@ -20,95 +36,118 @@ export default function PreviewSection({
   renderTemplate,
   onSendWhatsApp,
 }: PreviewSectionProps) {
-  const [copiedName, setCopiedName] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [sendingId, setSendingId] = useState<string | null>(null)
-  const [sendError, setSendError] = useState<string | null>(null)
-  const [showDeviceSelector, setShowDeviceSelector] = useState(false)
-  const [selectedDevice, setSelectedDevice] = useState<string | null>(null)
-  const [pendingSend, setPendingSend] = useState<{ id: string; name: string; phone: string } | null>(null)
+  const [copiedName, setCopiedName] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [showDeviceSelector, setShowDeviceSelector] = useState(false);
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [pendingSend, setPendingSend] = useState<{
+    id: string;
+    name: string;
+    phone_number: string;
+  } | null>(null);
 
   const handleCopyTemplate = (name: string) => {
-    const renderedText = renderTemplate(name)
-    navigator.clipboard.writeText(renderedText)
-    setCopiedName(name)
-    setTimeout(() => setCopiedName(null), 2000)
-  }
+    const renderedText = renderTemplate(name);
+    navigator.clipboard.writeText(renderedText);
+    setCopiedName(name);
+    setTimeout(() => setCopiedName(null), 2000);
+  };
 
   const handleShareWhatsApp = (name: string) => {
-    const renderedText = renderTemplate(name)
-    const encodedText = encodeURIComponent(renderedText)
-    const whatsappUrl = `https://wa.me/?text=${encodedText}`
-    window.open(whatsappUrl, "_blank")
-  }
+    const renderedText = renderTemplate(name);
+    const encodedText = encodeURIComponent(renderedText);
+    const whatsappUrl = `https://wa.me/?text=${encodedText}`;
+    window.open(whatsappUrl, "_blank");
+  };
 
-  const handleDirectSend = (item: { id: string; name: string; phone_number: string }) => {
+  const handleDirectSend = (item: {
+    id: string;
+    name: string;
+    phone_number: string;
+  }) => {
     if (!item.phone_number) {
-      setSendError("Nomor handphone tidak ada")
-      setTimeout(() => setSendError(null), 3000)
-      return
+      setSendError("Nomor handphone tidak ada");
+      setTimeout(() => setSendError(null), 3000);
+      return;
     }
-    setPendingSend(item)
-    setShowDeviceSelector(true)
-  }
+    setPendingSend(item);
+    setShowDeviceSelector(true);
+  };
 
   const handleDeviceSelected = async (deviceId: string) => {
-    if (!pendingSend || !onSendWhatsApp) return
+    if (!pendingSend) return;
 
     try {
-      setSendingId(pendingSend.id)
-      setSendError(null)
-      await onSendWhatsApp(pendingSend.id, pendingSend.name, pendingSend.phone_number, deviceId)
+      console.log(deviceId, "=============== Sending ID");
+      setSendingId(pendingSend.id);
+      setSendError(null);
+      await onSendWhatsApp(
+        pendingSend.id,
+        pendingSend.name,
+        pendingSend.phone_number,
+        deviceId
+      );
     } catch (err) {
-      setSendError(err instanceof Error ? err.message : "Gagal mengirim pesan")
-      setTimeout(() => setSendError(null), 3000)
+      setSendError(err instanceof Error ? err.message : "Gagal mengirim pesan");
+      setTimeout(() => setSendError(null), 3000);
     } finally {
-      setSendingId(null)
-      setPendingSend(null)
+      setSendingId(null);
+      setPendingSend(null);
     }
-  }
+  };
 
-  const filteredNames = names.filter((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredNames = names.filter((item) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const currentItem = names.find((item) => item.name === selectedName) || filteredNames[0] || names[0]
-  const rendered = currentItem ? renderTemplate(currentItem.name) : ""
+  const currentItem =
+    names.find((item) => item.name === selectedName) ||
+    filteredNames[0] ||
+    names[0];
+  const rendered = currentItem ? renderTemplate(currentItem.name) : "";
 
   const getStatusColor = (status?: string) => {
     switch (status) {
       case "sent":
-        return "bg-emerald-50 border-emerald-200 text-emerald-700"
+        return "bg-emerald-50 border-emerald-200 text-emerald-700";
       case "failed":
-        return "bg-red-50 border-red-200 text-red-700"
+        return "bg-red-50 border-red-200 text-red-700";
       default:
-        return "bg-slate-50 border-slate-200 text-slate-600"
+        return "bg-slate-50 border-slate-200 text-slate-600";
     }
-  }
+  };
 
   const getStatusText = (status?: string) => {
     switch (status) {
       case "sent":
-        return "Terkirim"
+        return "Terkirim";
       case "failed":
-        return "Gagal"
+        return "Gagal";
       default:
-        return "Menunggu"
+        return "Menunggu";
     }
-  }
+  };
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-8">
-      <h2 className="text-2xl font-bold text-slate-900 mb-6">Preview Template</h2>
+      <h2 className="text-2xl font-bold text-slate-900 mb-6">
+        Preview Template
+      </h2>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-slate-700 mb-2">Cari atau Pilih Nama:</label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">
+          Cari atau Pilih Nama:
+        </label>
         <input
           type="text"
           placeholder="Ketik nama untuk mencari..."
           value={searchQuery}
           onChange={(e) => {
-            setSearchQuery(e.target.value)
+            setSearchQuery(e.target.value);
             if (filteredNames.length > 0) {
-              setSelectedName(filteredNames[0].name)
+              setSelectedName(filteredNames[0].name);
             }
           }}
           className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
@@ -130,12 +169,22 @@ export default function PreviewSection({
       {currentItem && (
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-slate-50 rounded-lg border border-slate-200 p-3">
-            <p className="text-xs text-slate-600 font-medium">Nomor Handphone</p>
-            <p className="text-sm font-semibold text-slate-900 mt-1">{currentItem.phone_number || "-"}</p>
+            <p className="text-xs text-slate-600 font-medium">
+              Nomor Handphone
+            </p>
+            <p className="text-sm font-semibold text-slate-900 mt-1">
+              {currentItem.phone_number || "-"}
+            </p>
           </div>
-          <div className={`rounded-lg border p-3 ${getStatusColor(currentItem.whatsapp_status)}`}>
+          <div
+            className={`rounded-lg border p-3 ${getStatusColor(
+              currentItem.whatsapp_status
+            )}`}
+          >
             <p className="text-xs font-medium">Status WhatsApp</p>
-            <p className="text-sm font-semibold mt-1">{getStatusText(currentItem.whatsapp_status)}</p>
+            <p className="text-sm font-semibold mt-1">
+              {getStatusText(currentItem.whatsapp_status)}
+            </p>
           </div>
         </div>
       )}
@@ -208,11 +257,15 @@ export default function PreviewSection({
         </div>
         <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
           <p className="text-xs text-purple-600 font-medium">Karakter</p>
-          <p className="text-xl font-bold text-purple-700 mt-1">{rendered.length}</p>
+          <p className="text-xl font-bold text-purple-700 mt-1">
+            {rendered.length}
+          </p>
         </div>
         <div className="bg-slate-200 rounded-lg p-3 border border-slate-300">
           <p className="text-xs text-slate-600 font-medium">Baris</p>
-          <p className="text-xl font-bold text-slate-700 mt-1">{rendered.split("\n").length}</p>
+          <p className="text-xl font-bold text-slate-700 mt-1">
+            {rendered.split("\n").length}
+          </p>
         </div>
       </div>
 
@@ -223,5 +276,5 @@ export default function PreviewSection({
         isLoading={sendingId !== null}
       />
     </div>
-  )
+  );
 }
