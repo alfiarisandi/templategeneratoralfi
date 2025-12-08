@@ -1,101 +1,113 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useRef, useState } from "react"
-import { Upload, Plus, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Spinner from "@/components/spinner"
+import Spinner from "@/components/spinner";
+import { Button } from "@/components/ui/button";
+import { Plus, Upload, X } from "lucide-react";
+import { useRef, useState } from "react";
 
 interface ManualEntry {
-  name: string
-  phone: string
+  name: string;
+  phone: string;
 }
 
 interface FileUploadSectionProps {
-  onFileUpload: (file: File) => void
-  onAddNames: (entries: ManualEntry[]) => void
-  isUploading?: boolean
+  onFileUpload: (file: File) => void;
+  onAddNames: (entries: ManualEntry[]) => void;
+  isUploading?: boolean;
 }
 
-export default function FileUploadSection({ onFileUpload, onAddNames, isUploading = false }: FileUploadSectionProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [isDragActive, setIsDragActive] = useState(false)
-  const [fileName, setFileName] = useState<string>("")
-  const [manualName, setManualName] = useState("")
-  const [manualPhone, setManualPhone] = useState("")
-  const [manualEntries, setManualEntries] = useState<ManualEntry[]>([])
-  const [isAddingManual, setIsAddingManual] = useState(false)
+export default function FileUploadSection({
+  onFileUpload,
+  onAddNames,
+  isUploading = false,
+}: FileUploadSectionProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [fileName, setFileName] = useState<string>("");
+  const [manualName, setManualName] = useState("");
+  const [manualPhone, setManualPhone] = useState("");
+  const [manualEntries, setManualEntries] = useState<ManualEntry[]>([]);
+  const [isAddingManual, setIsAddingManual] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault();
+    e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
-      setIsDragActive(true)
+      setIsDragActive(true);
     } else if (e.type === "dragleave") {
-      setIsDragActive(false)
+      setIsDragActive(false);
     }
-  }
+  };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragActive(false)
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
 
-    const files = e.dataTransfer.files
+    const files = e.dataTransfer.files;
     if (files && files[0]) {
-      const file = files[0]
+      const file = files[0];
       if (
         file.name.endsWith(".xlsx") ||
-        file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        file.type ===
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       ) {
-        setFileName(file.name)
-        onFileUpload(file)
+        setFileName(file.name);
+        onFileUpload(file);
       }
     }
-  }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
+    const files = e.target.files;
     if (files && files[0]) {
-      const file = files[0]
-      setFileName(file.name)
-      onFileUpload(file)
+      const file = files[0];
+      setFileName(file.name);
+      onFileUpload(file);
     }
-  }
+  };
 
   const handleAddEntry = async () => {
-    const trimmedName = manualName.trim()
-    const trimmedPhone = manualPhone.trim()
+    const trimmedName = manualName.trim();
+    const trimmedPhone = manualPhone.replace(/\D/g, "").trim();
 
     if (trimmedName && trimmedPhone) {
-      setIsAddingManual(true)
-      const updatedEntries = [...manualEntries, { name: trimmedName, phone: trimmedPhone }]
-      setManualEntries(updatedEntries)
-      setManualName("")
-      setManualPhone("")
-      await onAddNames(updatedEntries)
-      setIsAddingManual(false)
+      setIsAddingManual(true);
+      const updatedEntries = [
+        ...manualEntries,
+        { name: trimmedName, phone: trimmedPhone },
+      ];
+      setManualEntries(updatedEntries);
+      setManualName("");
+      setManualPhone("");
+      await onAddNames(updatedEntries);
+      setIsAddingManual(false);
     }
-  }
+  };
 
   const handleRemoveEntry = (index: number) => {
-    const updatedEntries = manualEntries.filter((_, i) => i !== index)
-    setManualEntries(updatedEntries)
-    onAddNames(updatedEntries)
-  }
+    const updatedEntries = manualEntries.filter((_, i) => i !== index);
+    setManualEntries(updatedEntries);
+    onAddNames(updatedEntries);
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !isAddingManual) {
-      handleAddEntry()
+      handleAddEntry();
     }
-  }
+  };
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-8">
       <div className="mb-4">
-        <h2 className="text-xl font-bold text-slate-900 mb-2">Langkah 1: Upload File atau Tambah Nama</h2>
-        <p className="text-sm text-slate-600">Upload file Excel atau tambahkan nama dan nomor HP secara manual</p>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">
+          Langkah 1: Upload File atau Tambah Nama
+        </h2>
+        <p className="text-sm text-slate-600">
+          Upload file Excel atau tambahkan nama dan nomor HP secara manual
+        </p>
       </div>
 
       {isUploading ? (
@@ -109,11 +121,17 @@ export default function FileUploadSection({ onFileUpload, onAddNames, isUploadin
           onDragOver={handleDrag}
           onDrop={handleDrop}
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-all mb-6 ${
-            isDragActive ? "border-blue-500 bg-blue-50" : "border-slate-300 bg-slate-50 hover:border-slate-400"
+            isDragActive
+              ? "border-blue-500 bg-blue-50"
+              : "border-slate-300 bg-slate-50 hover:border-slate-400"
           }`}
         >
           <div className="mb-4">
-            <Upload className={`w-12 h-12 mx-auto ${isDragActive ? "text-blue-600" : "text-slate-400"}`} />
+            <Upload
+              className={`w-12 h-12 mx-auto ${
+                isDragActive ? "text-blue-600" : "text-slate-400"
+              }`}
+            />
           </div>
 
           <button
@@ -123,12 +141,26 @@ export default function FileUploadSection({ onFileUpload, onAddNames, isUploadin
             Pilih File
           </button>
 
-          <p className="text-sm text-slate-600 mb-1">atau drag & drop file Excel di sini</p>
-          <p className="text-xs text-slate-500">Format: .xlsx dengan kolom Nama dan Nomor HP</p>
+          <p className="text-sm text-slate-600 mb-1">
+            atau drag & drop file Excel di sini
+          </p>
+          <p className="text-xs text-slate-500">
+            Format: .xlsx dengan kolom Nama dan Nomor HP
+          </p>
 
-          {fileName && <p className="text-sm text-emerald-600 font-medium mt-4">✓ {fileName}</p>}
+          {fileName && (
+            <p className="text-sm text-emerald-600 font-medium mt-4">
+              ✓ {fileName}
+            </p>
+          )}
 
-          <input ref={fileInputRef} type="file" accept=".xlsx" onChange={handleFileSelect} className="hidden" />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
         </div>
       )}
 
@@ -139,7 +171,9 @@ export default function FileUploadSection({ onFileUpload, onAddNames, isUploadin
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-slate-900">Tambah Nama & Nomor HP Secara Manual</h3>
+        <h3 className="text-sm font-semibold text-slate-900">
+          Tambah Nama & Nomor HP Secara Manual
+        </h3>
         <div className="space-y-2">
           <input
             type="text"
@@ -180,7 +214,9 @@ export default function FileUploadSection({ onFileUpload, onAddNames, isUploadin
 
         {manualEntries.length > 0 && (
           <div className="mt-4">
-            <p className="text-xs text-slate-600 mb-2">Data yang ditambahkan ({manualEntries.length}):</p>
+            <p className="text-xs text-slate-600 mb-2">
+              Data yang ditambahkan ({manualEntries.length}):
+            </p>
             <div className="space-y-2">
               {manualEntries.map((entry, index) => (
                 <div
@@ -204,5 +240,5 @@ export default function FileUploadSection({ onFileUpload, onAddNames, isUploadin
         )}
       </div>
     </div>
-  )
+  );
 }
