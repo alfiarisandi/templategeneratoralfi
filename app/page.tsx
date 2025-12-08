@@ -249,10 +249,8 @@ export default function Home() {
   };
 
   const renderTemplate = (name: string): string => {
-    const result = name
-      .split(" ")
-      .map((w, i) => (i === 0 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
-      .join("%");
+    const result = encodeURIComponent(name);
+
     return template
       .replace(/\{\{nama\}\}/g, name)
       .replace(/\{\{namaLink\}\}/g, result);
