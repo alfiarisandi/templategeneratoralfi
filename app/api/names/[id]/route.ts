@@ -1,38 +1,68 @@
-import { createClient } from "@/lib/supabase/server"
-import { NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
 
 // UPDATE name
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = await params
-    const { name } = await request.json()
+    const { id } = await params;
+    const { name, phone_number } = await request.json();
 
     if (!name || name.trim().length === 0) {
-      return NextResponse.json({ error: "Name cannot be empty" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Name cannot be empty" },
+        { status: 400 }
+      );
     }
 
-    const supabase = await createClient()
-    const { data, error } = await supabase.from("names").update({ name: name.trim() }).eq("id", id).select().single()
+    if (!phone_number || phone_number.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Phone number cannot be empty" },
+        { status: 400 }
+      );
+    }
 
-    if (error) throw error
-    return NextResponse.json(data)
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("names")
+      .update({
+        name: name.trim(),
+        phone_number: phone_number.replace(/\D/g, "").trim(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return NextResponse.json(data);
   } catch (error) {
-    console.error("[v0] Error updating name:", error)
-    return NextResponse.json({ error: "Failed to update name" }, { status: 500 })
+    console.error("[v0] Error updating name:", error);
+    return NextResponse.json(
+      { error: "Failed to update name" },
+      { status: 500 }
+    );
   }
 }
 
 // DELETE name
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = await params
-    const supabase = await createClient()
-    const { error } = await supabase.from("names").delete().eq("id", id)
+    const { id } = await params;
+    const supabase = await createClient();
+    const { error } = await supabase.from("names").delete().eq("id", id);
 
-    if (error) throw error
-    return NextResponse.json({ success: true })
+    if (error) throw error;
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[v0] Error deleting name:", error)
-    return NextResponse.json({ error: "Failed to delete name" }, { status: 500 })
+    console.error("[v0] Error deleting name:", error);
+    return NextResponse.json(
+      { error: "Failed to delete name" },
+      { status: 500 }
+    );
   }
 }

@@ -17,7 +17,7 @@ interface NamesListSectionProps {
   template: string;
   renderTemplate: (name: string) => string;
   onDelete: (id: string) => void;
-  onUpdate: (id: string, newName: string) => void;
+  onUpdate: (id: string, newName: string, newPhoneNumber: string) => void;
   onSendWhatsApp: (
     id: string,
     name: string,
@@ -39,7 +39,7 @@ export default function NamesListSection({
 }: NamesListSectionProps) {
   const [copiedName, setCopiedName] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
+  const [editValue, setEditValue] = useState({ name: "", phone_number: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [sendingError, setSendingError] = useState<string | null>(null);
@@ -87,21 +87,31 @@ export default function NamesListSection({
     }
   };
 
-  const startEdit = (id: string, currentName: string) => {
+  const startEdit = (
+    id: string,
+    currentName: string,
+    currentPhoneNumber: string
+  ) => {
     setEditingId(id);
-    setEditValue(currentName);
+    setEditValue({ name: currentName, phone_number: currentPhoneNumber });
   };
 
   const saveEdit = (id: string) => {
-    if (editValue.trim()) {
-      onUpdate(id, editValue.trim());
+    if (editValue.name.trim()) {
+      onUpdate(id, editValue.name.trim(), editValue.phone_number.trim());
       setEditingId(null);
     }
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditValue("");
+    setEditValue({ name: "", phone_number: "" });
+  };
+
+  const handleEdit = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditValue((prev) => {
+      return { ...prev, [e.target.name]: e.target.value };
+    });
   };
 
   const getStatusDisplay = (status?: string) => {
@@ -146,13 +156,24 @@ export default function NamesListSection({
             >
               <div className="mb-3">
                 {editingId === item.id ? (
-                  <input
-                    type="text"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="w-full px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    autoFocus
-                  />
+                  <div>
+                    <input
+                      type="text"
+                      name="name"
+                      value={editValue.name}
+                      onChange={handleEdit}
+                      className="w-full px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      autoFocus
+                    />
+                    <input
+                      type="text"
+                      value={editValue.phone_number}
+                      name="phone_number"
+                      onChange={handleEdit}
+                      className="w-full px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      autoFocus
+                    />
+                  </div>
                 ) : (
                   <div>
                     <p className="font-medium text-slate-900 text-sm truncate">
@@ -229,7 +250,9 @@ export default function NamesListSection({
                     </button> */}
 
                     <button
-                      onClick={() => startEdit(item.id, item.name)}
+                      onClick={() =>
+                        startEdit(item.id, item.name, item.phone_number || "")
+                      }
                       className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors"
                       title="Edit nama"
                     >

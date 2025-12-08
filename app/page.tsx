@@ -176,12 +176,16 @@ export default function Home() {
     }
   };
 
-  const handleUpdateName = async (id: string, newName: string) => {
+  const handleUpdateName = async (
+    id: string,
+    newName: string,
+    newPhoneNumber: string
+  ) => {
     try {
       const response = await fetch(`/api/names/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName }),
+        body: JSON.stringify({ name: newName, phone_number: newPhoneNumber }),
       });
       if (!response.ok) throw new Error("Failed to update name");
       await loadNames();
