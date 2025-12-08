@@ -249,7 +249,13 @@ export default function Home() {
   };
 
   const renderTemplate = (name: string): string => {
-    return template.replace(/\{\{nama\}\}/g, name);
+    const result = name
+      .split(" ")
+      .map((w, i) => (i === 0 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+      .join("%");
+    return template
+      .replace(/\{\{nama\}\}/g, name)
+      .replace(/\{\{namaLink\}\}/g, result);
   };
 
   const handleSendWhatsApp = async (
