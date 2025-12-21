@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.WHATSAPP_API_KEY;
     const apiUrl = process.env.NEXT_PUBLIC_WHATSAPP_API_URL;
 
-    if (!apiKey || !apiUrl) {
+    if (!apiUrl) {
       console.error("[v0] WhatsApp API credentials not configured");
       return NextResponse.json(
         { error: "WhatsApp service not configured" },
