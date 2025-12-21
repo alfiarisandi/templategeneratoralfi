@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, CheckCircle2, Copy, Edit2, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useState, ChangeEvent } from "react";
 import Pagination from "./pagination";
 
 interface NameItem {
@@ -43,10 +43,16 @@ export default function NamesListSection({
   const [currentPage, setCurrentPage] = useState(1);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [sendingError, setSendingError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const totalPages = Math.ceil(names.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedNames = names.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const filteredNames = names.filter((item) =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredNames.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+  const paginatedNames = filteredNames.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const handleCopyTemplate = (name: string) => {
     const renderedText = renderTemplate(name);
@@ -108,7 +114,7 @@ export default function NamesListSection({
     setEditValue({ name: "", phone_number: "" });
   };
 
-  const handleEdit = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEdit = (e: ChangeEvent<HTMLInputElement>) => {
     setEditValue((prev) => {
       return { ...prev, [e.target.name]: e.target.value };
     });
@@ -137,7 +143,7 @@ export default function NamesListSection({
   return (
     <div className="bg-white rounded-lg border border-slate-200 p-6">
       <h2 className="text-lg font-bold text-slate-900 mb-4">
-        Daftar Nama ({names.length})
+        Daftar Nama ({filteredNames.length})
       </h2>
 
       {sendingError && (
@@ -145,6 +151,19 @@ export default function NamesListSection({
           {sendingError}
         </div>
       )}
+
+      <div className="mb-4">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
+          placeholder="Cari nama..."
+          className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        />
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {paginatedNames.map((item) => {
@@ -274,7 +293,7 @@ export default function NamesListSection({
         })}
       </div>
 
-      {names.length === 0 && (
+      {filteredNames.length === 0 && (
         <p className="text-sm text-slate-500 text-center py-4">
           Tidak ada nama
         </p>
@@ -282,7 +301,7 @@ export default function NamesListSection({
 
       {totalPages > 1 && (
         <Pagination
-          currentPage={currentPage}
+          currentPage={safePage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
         />
